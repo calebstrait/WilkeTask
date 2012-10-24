@@ -1,23 +1,4 @@
 % Copyright (c) 2012 University of Rochester
-% 
-% Permission is hereby granted, free of charge, to any person obtaining a copy
-% of this software and associated documentation files (the "Software"), to deal
-% in the Software without restriction, including without limitation the rights
-% to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-% copies of the Software, and to permit persons to whom the Software is
-% furnished to do so, subject to the following conditions:
-% 
-% The above copyright notice and this permission notice shall be included in
-% all copies or substantial portions of the Software.
-% 
-% THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-% IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-% FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
-% AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-% LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-% OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-% THE SOFTWARE.
-%
 
 function wilke_task()
     % ---------------------------------------------- %
@@ -39,12 +20,9 @@ function wilke_task()
     
     % Colors.
     colorBackground  = [25 23 23];
-    colorBlue        = [0 0 255];
     colorCyan        = [0 255 255];
     colorGray        = [128 128 128];
     colorDarkGray    = [70 70 70];
-    colorGreen       = [0 255 0];
-    colorOrange      = [255 127 0];
     colorYellow      = [255 255 0];
     colorWhite       = [255 255 255];
     
@@ -57,15 +35,6 @@ function wilke_task()
     hfWidth          = 75;                   % Half the width of the fixation boxes.
     imageSize        = 150;                  % Height and width for images.
     
-    
-    
-    endsBoundAdj     = 384;                  % Coordinate adjustment.
-    fixAdjust        = 172;                  % Target fixation adjustments.
-    grayBarHeight    = 400;                  % Height of the neutral gray bar.
-    imageWidth       = 128;                  % The width of the presented images.
-    imageHeight      = 128;                  % The height of the presented images.
-    sideBoundAdj     = 211;                  % Coordinate adjustment.
-    
     % Values to calculate fixation point bounds.
     fixBoundXMax     = centerX + hfWidth;
     fixBoundXMin     = centerX - hfWidth;
@@ -73,45 +42,52 @@ function wilke_task()
     fixBoundYMin     = centerY - hfWidth;
     
     % Coordinates for sun slot machine option.
-    sunPosXMax       = distFromSide + borderThick + imageSize;
-    sunPosXMin       = distFromSide + borderThick;
+    sunPosXMax       = distFromSide + imageSize;
+    sunPosXMin       = distFromSide;
     sunPosYMax       = distFromUpDown + imageSize;
     sunPosYMin       = distFromUpDown;
     
     % Coordinates for the moon slot machine option.
-    moonPosXMax      = distFromSide + borderThick + imageSize;
-    moonPosXMin      = distFromSide + borderThick;
+    moonPosXMax      = distFromSide + imageSize;
+    moonPosXMin      = distFromSide;
     moonPosYMax      = distFromUpDown + imageSize * 3 + borderThick * 2;
     moonPosYMin      = distFromUpDown + imageSize * 2 + borderThick * 2;
     
     % Coordinates for the orange slot machine option.
     orangePosXMax    = centerX * 2 - distFromSide;
-    orangePosXMin    = centerX * 2 - distFromSide - borderThick - imageSize;
+    orangePosXMin    = centerX * 2 - distFromSide - imageSize;
     orangePosYMax    = distFromUpDown + imageSize;
     orangePosYMin    = distFromUpDown;
     
     % Coordinates for the apple slot machine option.
     applePosXMax     = centerX * 2 - distFromSide;
-    applePosXMin     = centerX * 2 - distFromSide - borderThick - imageSize;
+    applePosXMin     = centerX * 2 - distFromSide - imageSize;
     applePosYMax     = distFromUpDown + imageSize * 3 + borderThick * 2;
     applePosYMin     = distFromUpDown + imageSize * 2 + borderThick * 2;
     
     % Coordinates for the left gray spin area.
-    leftSpinPosXMax  = distFromSide + borderThick + imageSize;
-    leftSpinPosXMin  = distFromSide + borderThick;
+    leftSpinPosXMax  = distFromSide + imageSize;
+    leftSpinPosXMin  = distFromSide;
     leftSpinPosYMax  = distFromUpDown + imageSize * 2 + borderThick;
     leftSpinPosYMin  = distFromUpDown + imageSize + borderThick;
     
     % Coordinates for the right gray spin area.
     rightSpinPosXMax = centerX * 2 - distFromSide;
-    rightSpinPosXMin = centerX * 2 - distFromSide - borderThick - imageSize;
+    rightSpinPosXMin = centerX * 2 - distFromSide - imageSize;
     rightSpinPosYMax = distFromUpDown + imageSize * 2 + borderThick;
     rightSpinPosYMin = distFromUpDown + imageSize + borderThick;
     
     % Coordinates for the left safe option.
-    leftSafePosXMax  = 
+    leftSafePosXMax  = distFromSide + imageSize;
+    leftSafePosXMin  = distFromSide;
+    leftSafePosYMax  = distFromUpDown + imageSize * 3 + borderThick * 2;
+    leftSafePosYMin  = distFromUpDown;
     
     % Coordinates for the right safe option.
+    rightSafePosXMax = centerX * 2 - distFromSide;
+    rightSafePosXMin = centerX * 2 - distFromSide - imageSize;
+    rightSafePosYMax = distFromUpDown + imageSize * 3 + borderThick * 2;
+    rightSafePosYMin = distFromUpDown;
     
     % References.
     monkeyScreen     = 0;                    % Number of the screen the monkey sees.
@@ -167,6 +143,7 @@ function wilke_task()
     % ------------ Main experiment loop ------------ %
     % ---------------------------------------------- %
     
+    %{
     Screen('PutImage', window, imgSun, [sunPosXMin, sunPosYMin, ...
                                         sunPosXMax, sunPosYMax]);
     Screen('PutImage', window, imgMoon, [moonPosXMin, moonPosYMin, ...
@@ -195,11 +172,21 @@ function wilke_task()
                                         leftSpinPosYMin, ...
                                         leftSpinPosXMax, ...
                                         leftSpinPosYMax]);
+                                    
+    Screen('FillRect', window, colorGray, [leftSafePosXMin; ...
+                                           leftSafePosYMin; ...
+                                           leftSafePosXMax; ...
+                                           leftSafePosYMax]);
+    Screen('FillRect', window, colorGray, [rightSafePosXMin; ...
+                                           rightSafePosYMin; ...
+                                           rightSafePosXMax; ...
+                                           rightSafePosYMax]);
+    %}
     
     draw_fixation_bounds;
     running = true;
     while running
-        %run_single_trial;
+        run_single_trial;
         
         % print_stats;
         
