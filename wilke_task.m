@@ -36,10 +36,31 @@ function wilke_task()
     imageSize        = 150;                  % Height and width for images.
     
     % Values to calculate fixation point bounds.
-    fixBoundXMax     = centerX + hfWidth;
-    fixBoundXMin     = centerX - hfWidth;
-    fixBoundYMax     = centerY + hfWidth;
-    fixBoundYMin     = centerY - hfWidth;
+    fixBoundXMax     = centerX + imageSize * 0.75;
+    fixBoundXMin     = centerX - imageSize * 0.75;
+    fixBoundYMax     = centerY + imageSize * 0.75;
+    fixBoundYMin     = centerY - imageSize * 0.75;
+    
+    % Option fixation boundry values.
+    sunBoundXMax     = centerX - hfWidth - imageSize;
+    sunBoundXMin     = 0;
+    sunBoundYMax     = centerY - imageSize / 2;
+    sunBoundYMin     = 0;
+    
+    moonBoundXMax    = centerX - hfWidth - imageSize;
+    moonBoundXMin    = 0;
+    moonBoundYMax    = centerY * 2;
+    moonBoundYMin    = centerY + hfWidth;
+    
+    orangeBoundXMax  = centerX * 2;
+    orangeBoundXMin  = centerX + hfWidth + imageSize;
+    orangeBoundYMax  = centerY - imageSize / 2;
+    orangeBoundYMin  = 0;
+    
+    appleBoundXMax   = centerX * 2;
+    appleBoundXMin   = centerX + hfWidth + imageSize;
+    appleBoundYMax   = centerY * 2;
+    appleBoundYMin   = centerY + hfWidth;
     
     % Coordinates for sun slot machine option.
     sunPosXMax       = distFromSide + imageSize;
@@ -172,7 +193,6 @@ function wilke_task()
                                         leftSpinPosYMin, ...
                                         leftSpinPosXMax, ...
                                         leftSpinPosYMax]);
-                                    
     Screen('FillRect', window, colorGray, [leftSafePosXMin; ...
                                            leftSafePosYMin; ...
                                            leftSafePosXMax; ...
@@ -181,12 +201,31 @@ function wilke_task()
                                            rightSafePosYMin; ...
                                            rightSafePosXMax; ...
                                            rightSafePosYMax]);
+    Screen('FrameRect', window, colorYellow, [sunBoundXMin, sunBoundYMin, ...
+                                              sunBoundXMax, sunBoundYMax], 1);
+    Screen('PutImage', window, imgSun, [sunPosXMin, sunPosYMin, ...
+                                        sunPosXMax, sunPosYMax]);
+    
+    Screen('FrameRect', window, colorYellow, [moonBoundXMin, moonBoundYMin, ...
+                                              moonBoundXMax, moonBoundYMax], 1);
+    Screen('PutImage', window, imgMoon, [moonPosXMin, moonPosYMin, ...
+                                         moonPosXMax, moonPosYMax]);
+    
+    Screen('FrameRect', window, colorYellow, [orangeBoundXMin, orangeBoundYMin, ...
+                                              orangeBoundXMax, orangeBoundYMax], 1);
+    Screen('PutImage', window, imgOrange, [orangePosXMin, orangePosYMin, ...
+                                           orangePosXMax, orangePosYMax]);
+    
+    Screen('FrameRect', window, colorYellow, [appleBoundXMin, appleBoundYMin, ...
+                                              appleBoundXMax, appleBoundYMax], 1);
+    Screen('PutImage', window, imgApple, [applePosXMin, applePosYMin, ...
+                                          applePosXMax, applePosYMax]);
     %}
     
     draw_fixation_bounds;
     running = true;
     while running
-        run_single_trial;
+        % run_single_trial;
         
         % print_stats;
         
