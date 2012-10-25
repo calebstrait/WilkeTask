@@ -13,7 +13,10 @@ function wilke_task()
     % @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ %
     % @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ %
       
-      trackedEye     = 1;                   % Values: 1 (left eye), 2 (right eye).
+      taskType  = 'double';             % Values: 'double', 'singleSky',
+                                        %         'singleFruit', 'safeLeft', or
+                                        %         'safeRight'.
+      trackedEye = 1;                   % Values: 1 (left eye), 2 (right eye).
       
     % @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ %
     % @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ %
@@ -34,6 +37,11 @@ function wilke_task()
     distFromUpDown   = 139;                  % Margin between images and screen top and bottom.
     hfWidth          = 75;                   % Half the width of the fixation boxes.
     imageSize        = 150;                  % Height and width for images.
+    safeOpHeight     = 300;                  % Height of safe option bar.
+    safeOpWidth      = 80;                   % Width of safe option bar.
+    
+    % Intermediate calculation for the safe option bar height position.
+    safeOpCeilGap    = ((centerY * 2 - distFromUpDown * 2) - safeOpHeight) / 2;
     
     % Values to calculate fixation point bounds.
     fixBoundXMax     = centerX + imageSize * 0.75;
@@ -99,16 +107,16 @@ function wilke_task()
     rightSpinPosYMin = distFromUpDown + imageSize + borderThick;
     
     % Coordinates for the left safe option.
-    leftSafePosXMax  = distFromSide + imageSize;
+    leftSafePosXMax  = distFromSide + safeOpWidth;
     leftSafePosXMin  = distFromSide;
-    leftSafePosYMax  = distFromUpDown + imageSize * 3 + borderThick * 2;
-    leftSafePosYMin  = distFromUpDown;
+    leftSafePosYMax  = safeOpCeilGap + distFromUpDown + safeOpHeight;
+    leftSafePosYMin  = safeOpCeilGap + distFromUpDown;
     
     % Coordinates for the right safe option.
     rightSafePosXMax = centerX * 2 - distFromSide;
-    rightSafePosXMin = centerX * 2 - distFromSide - imageSize;
-    rightSafePosYMax = distFromUpDown + imageSize * 3 + borderThick * 2;
-    rightSafePosYMin = distFromUpDown;
+    rightSafePosXMin = centerX * 2 - distFromSide - safeOpWidth;
+    rightSafePosYMax = safeOpCeilGap + distFromUpDown + safeOpHeight;
+    rightSafePosYMin = safeOpCeilGap + distFromUpDown;
     
     % References.
     monkeyScreen     = 0;                    % Number of the screen the monkey sees.
@@ -120,7 +128,7 @@ function wilke_task()
     numCorrTimes     = 0;                    % Times "correct" probe option chosen.
     percentChoseImg  = 0;                    % Percent of times the image option was chosen.
     percentCorrect   = 0;                    % Percent "corect" probe chosen.
-    rewardRepeatData = '/Data/RewardRepeat'; % Directory where .mat files are saved.
+    rewardRepeatData = '/Data/WilkeTask';    % Directory where .mat files are saved.
     saveCommand      = NaN;                  % Command string that will save .mat files.
     varName          = 'data';               % Name of the variable to save in the workspace.
     
@@ -131,13 +139,15 @@ function wilke_task()
     fixAdj           = 1;
     
     % Times.
-    chooseFixTime    = 0.5;                  % How long subject must look at choice to select it.
+    chooseHoldTime   = 0.2;                  % How long subject must look at choice to select it.
     ITI              = 1;                    % Intertrial interval.
+    initHoldFixTime  = 0.3;                  % Time fixation must be held before choosing an option.
     minFixTime       = 0.1;                  % Minimum time monkey must fixate to start trial.
     timeToFix        = intmax;               % Amount of time monkey is given to fixate.
     
     % Trial.
     currTrial        = 0;                    % Current trial.
+    redoFlag         = false;                % Indicates whether a trial is repeating.
     
     % ---------------------------------------------- %
     % ------------------- Setup -------------------- %
@@ -164,68 +174,9 @@ function wilke_task()
     % ------------ Main experiment loop ------------ %
     % ---------------------------------------------- %
     
-    %{
-    Screen('PutImage', window, imgSun, [sunPosXMin, sunPosYMin, ...
-                                        sunPosXMax, sunPosYMax]);
-    Screen('PutImage', window, imgMoon, [moonPosXMin, moonPosYMin, ...
-                                         moonPosXMax, moonPosYMax]);
-    Screen('PutImage', window, imgOrange, [orangePosXMin, orangePosYMin, ...
-                                           orangePosXMax, orangePosYMax]);
-    Screen('PutImage', window, imgApple, [applePosXMin, applePosYMin, ...
-                                          applePosXMax, applePosYMax]);
-    Screen('FillRect', window, colorDarkGray, [leftSpinPosXMin; ...
-                                               leftSpinPosYMin; ...
-                                               leftSpinPosXMax; ...
-                                               leftSpinPosYMax]);
-    Screen('FillRect', window, colorDarkGray, [rightSpinPosXMin; ...
-                                               rightSpinPosYMin; ...
-                                               rightSpinPosXMax; ...
-                                               rightSpinPosYMax]);
-    Screen('FrameRect', window, colorCyan, [sunPosXMin - borderThick, sunPosYMin - borderThick, ...
-                                            sunPosXMax + borderThick, sunPosYMax + borderThick], borderThick);
-    Screen('FrameRect', window, colorCyan, [moonPosXMin - borderThick, moonPosYMin - borderThick, ...
-                                            moonPosXMax + borderThick, moonPosYMax + borderThick], borderThick);
-    Screen('FrameRect', window, colorCyan, [orangePosXMin - borderThick, orangePosYMin - borderThick, ...
-                                            orangePosXMax + borderThick, orangePosYMax + borderThick], borderThick);
-    Screen('FrameRect', window, colorCyan, [applePosXMin - borderThick, applePosYMin - borderThick, ...
-                                            applePosXMax + borderThick, applePosYMax + borderThick], borderThick); 
-    Screen('PutImage', window, imgMoon, [leftSpinPosXMin, ...
-                                        leftSpinPosYMin, ...
-                                        leftSpinPosXMax, ...
-                                        leftSpinPosYMax]);
-    Screen('FillRect', window, colorGray, [leftSafePosXMin; ...
-                                           leftSafePosYMin; ...
-                                           leftSafePosXMax; ...
-                                           leftSafePosYMax]);
-    Screen('FillRect', window, colorGray, [rightSafePosXMin; ...
-                                           rightSafePosYMin; ...
-                                           rightSafePosXMax; ...
-                                           rightSafePosYMax]);
-    Screen('FrameRect', window, colorYellow, [sunBoundXMin, sunBoundYMin, ...
-                                              sunBoundXMax, sunBoundYMax], 1);
-    Screen('PutImage', window, imgSun, [sunPosXMin, sunPosYMin, ...
-                                        sunPosXMax, sunPosYMax]);
-    
-    Screen('FrameRect', window, colorYellow, [moonBoundXMin, moonBoundYMin, ...
-                                              moonBoundXMax, moonBoundYMax], 1);
-    Screen('PutImage', window, imgMoon, [moonPosXMin, moonPosYMin, ...
-                                         moonPosXMax, moonPosYMax]);
-    
-    Screen('FrameRect', window, colorYellow, [orangeBoundXMin, orangeBoundYMin, ...
-                                              orangeBoundXMax, orangeBoundYMax], 1);
-    Screen('PutImage', window, imgOrange, [orangePosXMin, orangePosYMin, ...
-                                           orangePosXMax, orangePosYMax]);
-    
-    Screen('FrameRect', window, colorYellow, [appleBoundXMin, appleBoundYMin, ...
-                                              appleBoundXMax, appleBoundYMax], 1);
-    Screen('PutImage', window, imgApple, [applePosXMin, applePosYMin, ...
-                                          applePosXMax, applePosYMax]);
-    %}
-    
-    draw_fixation_bounds;
     running = true;
     while running
-        % run_single_trial;
+        run_single_trial;
         
         % print_stats;
         
@@ -281,24 +232,20 @@ function wilke_task()
                     end
                 end
             elseif strcmp(type, 'double')
-                % Determine if eye is within the left option boundary.
-                if xCoord >= leftBoundXMin && xCoord <= leftBoundXMax && ...
-                   yCoord >= leftBoundYMin && yCoord <= leftBoundYMax
-                    if probeSpot == 1
-                        draw_feedback('left', 'probe', colorWhite);
-                    else
-                        draw_feedback('left', 'neutral', colorWhite);
-                    end
+                % Determine if eye is within the sun option boundary.
+                if xCoord >= sunBoundXMin && xCoord <= sunBoundXMax && ...
+                   yCoord >= sunBoundYMin && yCoord <= sunBoundYMax
+                    draw_feedback('sun', colorWhite);
                     
                     % Determine if eye maintained fixation for given duration.
-                    checkFixBreak = fix_break_check(leftBoundXMin, leftBoundXMax, ...
-                                                    leftBoundYMin, leftBoundYMax, ...
+                    checkFixBreak = fix_break_check(sunBoundXMin, sunBoundXMax, ...
+                                                    sunBoundYMin, sunBoundYMax, ...
                                                     duration);
                     
                     if checkFixBreak == false
                         % Fixation was obtained for desired duration.
                         fixation = true;
-                        area = 'left';
+                        area = 'sun';
                         
                         return;
                     else
@@ -415,7 +362,71 @@ function wilke_task()
                                            centerY - dotRadius; ...
                                            centerX + dotRadius - fixAdj; ...
                                            centerY + dotRadius]);
-        Screen('Flip', window);
+    end
+    
+    function draw_options(type)
+        if strcmp(type, 'double')
+            Screen('PutImage', window, imgSun, [sunPosXMin, sunPosYMin, ...
+                                                sunPosXMax, sunPosYMax]);
+            Screen('PutImage', window, imgMoon, [moonPosXMin, moonPosYMin, ...
+                                                 moonPosXMax, moonPosYMax]);
+            Screen('PutImage', window, imgOrange, [orangePosXMin, orangePosYMin, ...
+                                                   orangePosXMax, orangePosYMax]);
+            Screen('PutImage', window, imgApple, [applePosXMin, applePosYMin, ...
+                                                  applePosXMax, applePosYMax]);
+            Screen('FillRect', window, colorDarkGray, [leftSpinPosXMin; ...
+                                                       leftSpinPosYMin; ...
+                                                       leftSpinPosXMax; ...
+                                                       leftSpinPosYMax]);
+            Screen('FillRect', window, colorDarkGray, [rightSpinPosXMin; ...
+                                                       rightSpinPosYMin; ...
+                                                       rightSpinPosXMax; ...
+                                                       rightSpinPosYMax]);
+        elseif strcmp(type, 'singleSky')
+            Screen('PutImage', window, imgSun, [sunPosXMin, sunPosYMin, ...
+                                                sunPosXMax, sunPosYMax]);
+            Screen('PutImage', window, imgMoon, [moonPosXMin, moonPosYMin, ...
+                                                 moonPosXMax, moonPosYMax]);
+            Screen('FillRect', window, colorDarkGray, [leftSpinPosXMin; ...
+                                                       leftSpinPosYMin; ...
+                                                       leftSpinPosXMax; ...
+                                                       leftSpinPosYMax]);
+        elseif strcmp(type, 'singleFruit')
+            Screen('PutImage', window, imgOrange, [orangePosXMin, orangePosYMin, ...
+                                                   orangePosXMax, orangePosYMax]);
+            Screen('PutImage', window, imgApple, [applePosXMin, applePosYMin, ...
+                                                  applePosXMax, applePosYMax]);
+            Screen('FillRect', window, colorDarkGray, [rightSpinPosXMin; ...
+                                                       rightSpinPosYMin; ...
+                                                       rightSpinPosXMax; ...
+                                                       rightSpinPosYMax]);
+        elseif strcmp(type, 'safeLeft')
+            Screen('PutImage', window, imgOrange, [orangePosXMin, orangePosYMin, ...
+                                                   orangePosXMax, orangePosYMax]);
+            Screen('PutImage', window, imgApple, [applePosXMin, applePosYMin, ...
+                                                  applePosXMax, applePosYMax]);
+            Screen('FillRect', window, colorDarkGray, [rightSpinPosXMin; ...
+                                                       rightSpinPosYMin; ...
+                                                       rightSpinPosXMax; ...
+                                                       rightSpinPosYMax]);
+            Screen('FillRect', window, colorGray, [leftSafePosXMin; ...
+                                                   leftSafePosYMin; ...
+                                                   leftSafePosXMax; ...
+                                                   leftSafePosYMax]);
+        elseif strcmp(type, 'safeRight')
+            Screen('PutImage', window, imgSun, [sunPosXMin, sunPosYMin, ...
+                                                sunPosXMax, sunPosYMax]);
+            Screen('PutImage', window, imgMoon, [moonPosXMin, moonPosYMin, ...
+                                                 moonPosXMax, moonPosYMax]);
+            Screen('FillRect', window, colorDarkGray, [leftSpinPosXMin; ...
+                                                       leftSpinPosYMin; ...
+                                                       leftSpinPosXMax; ...
+                                                       leftSpinPosYMax]);
+            Screen('FillRect', window, colorGray, [rightSafePosXMin; ...
+                                                   rightSafePosYMin; ...
+                                                   rightSafePosXMax; ...
+                                                   rightSafePosYMax]);
+        end
     end
     
     % Checks if the eye breaks fixation bounds before end of duration.
@@ -616,21 +627,58 @@ function wilke_task()
     end
     
     function run_single_trial()
-        currTrial = currTrial + 1;
+        % Increment trial counter only if this trial is not a repeated trial.
+        if ~redoFlag
+            currTrial = currTrial + 1;
+        end
         
         % Fixation dot appears.
         draw_fixation_point(colorYellow);
+        Screen('Flip', window);
         
         % Check for fixation.
         [fixating, ~] = check_fixation('single', minFixTime, timeToFix);
         
         if fixating
-            draw_fixation_bounds;
+            % Turn all options on.
+            draw_options('safeLeft');
+            draw_fixation_point(colorYellow);
+            Screen('Flip', window);
             
+            % Determine if eye maintained hold fixation for given duration.
+            checkFixBreak = fix_break_check(fixBoundXMin, fixBoundXMax, ...
+                                            fixBoundYMin, fixBoundYMax, ...
+                                            initHoldFixTime);
+            
+            % Repeat trial if fixation is broken in hold state.
+            if checkFixBreak
+                redoFlag = true;
+                
+                % Redo this trial since monkey failed it.
+                run_single_trial;
+                
+                return;
+            else
+                redoFlag = false;
+                
+                % Choice period. Check for choice fixations on any four options.
+                fixatingOnTarget = false;
+                while ~fixatingOnTarget
+                    % Check for fixation on any three targets.
+                    [fixatingOnTarget, area] = check_fixation('double', chooseHoldTime, timeToFix);
+                    
+                    % Do appropriate action for choices.
+                    if fixationOnTarget
+                        % Spin options.
+                        
+                        % Give feedback.
+                    end
+                end
+            end
         else
             % Redo this trial since monkey failed to start it.
             run_single_trial;
-        end
+        end 
     end
     
     % Saves trial data to a .mat file.
