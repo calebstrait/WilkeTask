@@ -139,7 +139,7 @@ function wilke_task()
     fixAdj           = 1;
     
     % Times.
-    chooseHoldTime   = 0.2;                  % How long subject must look at choice to select it.
+    chooseHoldTime   = 1;                  % How long subject must look at choice to select it.
     ITI              = 1;                    % Intertrial interval.
     initHoldFixTime  = 0.3;                  % Time fixation must be held before choosing an option.
     minFixTime       = 0.1;                  % Minimum time monkey must fixate to start trial.
@@ -249,30 +249,68 @@ function wilke_task()
                         
                         return;
                     else
-                        display_choice;
+                        draw_options('double');
+                        Screen('Flip', window);
                     end
-                % Determine if eye is within the right option boundary.
-                elseif xCoord >= rightBoundXMin && xCoord <= rightBoundXMax && ...
-                       yCoord >= rightBoundYMin && yCoord <= rightBoundYMax
-                    if probeSpot == 2
-                        draw_feedback('right', 'probe', colorWhite);
-                    else
-                        draw_feedback('right', 'neutral', colorWhite);
-                    end
+                % Determine if eye is within the moon option boundary.
+                elseif xCoord >= moonBoundXMin && xCoord <= moonBoundXMax && ...
+                       yCoord >= moonBoundYMin && yCoord <= moonBoundYMax
+                    draw_feedback('moon', colorWhite);
                     
                     % Determine if eye maintained fixation for given duration.
-                    checkFixBreak = fix_break_check(rightBoundXMin, rightBoundXMax, ...
-                                                    rightBoundYMin, rightBoundYMax, ...
+                    checkFixBreak = fix_break_check(moonBoundXMin, moonBoundXMax, ...
+                                                    moonBoundYMin, moonBoundYMax, ...
                                                     duration);
                     
                     if checkFixBreak == false
                         % Fixation was obtained for desired duration.
                         fixation = true;
-                        area = 'right';
+                        area = 'moon';
                         
                         return;
                     else
-                        display_choice;
+                        draw_options('double');
+                        Screen('Flip', window);
+                    end
+                % Determine if eye is within the orange option boundary.
+                elseif xCoord >= orangeBoundXMin && xCoord <= orangeBoundXMax && ...
+                       yCoord >= orangeBoundYMin && yCoord <= orangeBoundYMax
+                    draw_feedback('orange', colorWhite);
+                    
+                    % Determine if eye maintained fixation for given duration.
+                    checkFixBreak = fix_break_check(orangeBoundXMin, orangeBoundXMax, ...
+                                                    orangeBoundYMin, orangeBoundYMax, ...
+                                                    duration);
+                    
+                    if checkFixBreak == false
+                        % Fixation was obtained for desired duration.
+                        fixation = true;
+                        area = 'orange';
+                        
+                        return;
+                    else
+                        draw_options('double');
+                        Screen('Flip', window);
+                    end
+                % Determine if eye is within the apple option boundary.
+                elseif xCoord >= appleBoundXMin && xCoord <= appleBoundXMax && ...
+                       yCoord >= appleBoundYMin && yCoord <= appleBoundYMax
+                    draw_feedback('apple', colorWhite);
+                    
+                    % Determine if eye maintained fixation for given duration.
+                    checkFixBreak = fix_break_check(appleBoundXMin, appleBoundXMax, ...
+                                                    appleBoundYMin, appleBoundYMax, ...
+                                                    duration);
+                    
+                    if checkFixBreak == false
+                        % Fixation was obtained for desired duration.
+                        fixation = true;
+                        area = 'apple';
+                        
+                        return;
+                    else
+                        draw_options('double');
+                        Screen('Flip', window);
                     end
                 end
             else
@@ -285,67 +323,47 @@ function wilke_task()
         area = 'none';
     end
     
-    % TODO: Only works for two stimuli.
     % Draw colored outlines around options for feedback.
-    function draw_feedback(location, type, color)
-        if strcmp(location, 'left')
-            if strcmp(type, 'probe')
-                screenFlip = false;
-                display_choice;
-                
-                if strcmp(experimentType, 'training1')
-                    Screen('FrameRect', window, color, [leftStimXMin - bordThick - feedThick, ...
-                                                        leftStimYMin - bordThick - feedThick, ...
-                                                        leftStimXMax + bordThick + feedThick, ...
-                                                        leftStimYMax + bordThick + feedThick], ...
-                                                        feedThick);
-                else
-                    Screen('FrameRect', window, color, [leftStimXMin - feedThick, ...
-                                                        leftStimYMin - feedThick, ...
-                                                        leftStimXMax + feedThick, ...
-                                                        leftStimYMax + feedThick], ...
-                                                        feedThick);
-                end
-            else
-                screenFlip = false;
-                display_choice;
-                Screen('FrameRect', window, color, [leftGreyXMin - feedThick, ...
-                                                    leftGreyYMin - feedThick, ...
-                                                    leftGreyXMax + feedThick, ...
-                                                    leftGreyYMax + feedThick], ...
-                                                    feedThick);
-            end
-        elseif strcmp(location, 'right')
-            if strcmp(type, 'probe')
-                screenFlip = false;
-                display_choice;
-                
-                if strcmp(experimentType, 'training1')
-                    Screen('FrameRect', window, color, [rightStimXMin - bordThick - feedThick, ...
-                                                        rightStimYMin - bordThick - feedThick, ...
-                                                        rightStimXMax + bordThick + feedThick, ...
-                                                        rightStimYMax + bordThick + feedThick], ...
-                                                        feedThick);
-                else
-                    Screen('FrameRect', window, color, [rightStimXMin - feedThick, ...
-                                                        rightStimYMin - feedThick, ...
-                                                        rightStimXMax + feedThick, ...
-                                                        rightStimYMax + feedThick], ...
-                                                        feedThick);
-                end
-            else
-                screenFlip = false;
-                display_choice;
-                Screen('FrameRect', window, color, [rightGreyXMin - feedThick, ...
-                                                    rightGreyYMin - feedThick, ...
-                                                    rightGreyXMax + feedThick, ...
-                                                    rightGreyYMax + feedThick], ...
-                                                    feedThick);
-            end
+    function draw_feedback(location, color)
+        if strcmp(location, 'sun')
+            draw_options(taskType);
+            Screen('FrameRect', window, color, [sunPosXMin - borderThick, ...
+                                                sunPosYMin - borderThick, ...
+                                                sunPosXMax + borderThick, ...
+                                                sunPosYMax + borderThick], borderThick);
+        elseif strcmp(location, 'moon')
+            draw_options(taskType);
+            Screen('FrameRect', window, color, [moonPosXMin - borderThick, ...
+                                                moonPosYMin - borderThick, ...
+                                                moonPosXMax + borderThick, ...
+                                                moonPosYMax + borderThick], borderThick);
+        elseif strcmp(location, 'orange')
+            draw_options(taskType);
+            Screen('FrameRect', window, color, [orangePosXMin - borderThick, ...
+                                                orangePosYMin - borderThick, ...
+                                                orangePosXMax + borderThick, ...
+                                                orangePosYMax + borderThick], borderThick);
+        elseif strcmp(location, 'apple')
+            draw_options(taskType);
+            Screen('FrameRect', window, color, [applePosXMin - borderThick, ...
+                                                applePosYMin - borderThick, ...
+                                                applePosXMax + borderThick, ...
+                                                applePosYMax + borderThick], borderThick);
+        elseif strcmp(location, 'safeLeft')
+            draw_options(taskType);
+            Screen('FrameRect', window, color, [leftSafePosXMin - borderThick, ...
+                                                leftSafePosYMin - borderThick, ...
+                                                leftSafePosXMax + borderThick, ...
+                                                leftSafePosYMax + borderThick], borderThick);
+        elseif strcmp(location, 'safeRight')
+            draw_options(taskType);
+            Screen('FrameRect', window, color, [rightSafePosXMin - borderThick, ...
+                                                rightSafePosYMin - borderThick, ...
+                                                rightSafePosXMax + borderThick, ...
+                                                rightSafePosYMax + borderThick], borderThick);
         end
         
         Screen('Flip', window);
-        screenFlip = true;
     end
     
     % TODO: Uses globals. Make sure they are what you think they are.
@@ -641,7 +659,7 @@ function wilke_task()
         
         if fixating
             % Turn all options on.
-            draw_options('safeLeft');
+            draw_options('double');
             draw_fixation_point(colorYellow);
             Screen('Flip', window);
             
@@ -661,14 +679,18 @@ function wilke_task()
             else
                 redoFlag = false;
                 
+                % Turn all options on without a fixation point.
+                draw_options('double');
+                Screen('Flip', window);
+                
                 % Choice period. Check for choice fixations on any four options.
                 fixatingOnTarget = false;
                 while ~fixatingOnTarget
                     % Check for fixation on any three targets.
-                    [fixatingOnTarget, area] = check_fixation('double', chooseHoldTime, timeToFix);
+                    [fixatingOnTarget, area] = check_fixation(taskType, chooseHoldTime, timeToFix);
                     
                     % Do appropriate action for choices.
-                    if fixationOnTarget
+                    if fixatingOnTarget
                         % Spin options.
                         
                         % Give feedback.
