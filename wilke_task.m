@@ -13,10 +13,13 @@ function wilke_task()
     % @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ %
     % @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ %
       
-      taskType  = 'double';             % Values: 'double', 'singleSky',
-                                        %         'singleFruit', 'safeLeft', or
-                                        %         'safeRight'.
-      trackedEye = 1;                   % Values: 1 (left eye), 2 (right eye).
+      taskType     = 'safeLeft';           % Values: 'double', 'singleSky',
+                                           %         'singleFruit', 'safeLeft', or
+                                           %         'safeRight'.
+      correlation  = 0;                    % Values: Floating point numbers between
+                                           %         -1 and 1 inclusive.
+      showUnchosen = false;                % Values: true or false.
+      trackedEye   = 1;                    % Values: 1 (left eye), 2 (right eye).
       
     % @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ %
     % @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ %
@@ -69,6 +72,16 @@ function wilke_task()
     appleBoundXMin   = centerX + hfWidth + imageSize;
     appleBoundYMax   = centerY * 2;
     appleBoundYMin   = centerY + hfWidth;
+    
+    safeLBoundXMax   = centerX - hfWidth - imageSize;
+    safeLBoundXMin   = 0;
+    safeLBoundYMax   = centerY * 2;
+    safeLBoundYMin   = 0;
+    
+    safeRBoundXMax   = centerX * 2;
+    safeRBoundXMin   = centerX + hfWidth + imageSize;
+    safeRBoundYMax   = centerY * 2;
+    safeRBoundYMin   = 0;
     
     % Coordinates for sun slot machine option.
     sunPosXMax       = distFromSide + imageSize;
@@ -133,25 +146,44 @@ function wilke_task()
     varName          = 'data';               % Name of the variable to save in the workspace.
     
     % Stimuli.
-    bordThick        = 20;                   % Thickness for all borders.
-    dotRadius        = 10;                   % Radius of the fixation dot.
-    feedThick        = 10;                   % Thickness of the feedback borders.
-    fixAdj           = 1;
+    pointRadius      = 10;                   % Radius of the fixation dot.
     
     % Times.
-    chooseHoldTime   = 1;                  % How long subject must look at choice to select it.
+    chooseHoldTime   = 1;                    % How long subject must look at choice to select it.
+    feedbackTime     = 0.5;                  % Time option selected feedback border is given.
+    flashInterval    = 0.3;                  % Time between fame redraws when options are spinning.
     ITI              = 1;                    % Intertrial interval.
     initHoldFixTime  = 0.3;                  % Time fixation must be held before choosing an option.
     minFixTime       = 0.1;                  % Minimum time monkey must fixate to start trial.
+    spinTime         = 3;                    % How long the slot machine options spin.
     timeToFix        = intmax;               % Amount of time monkey is given to fixate.
     
     % Trial.
     currTrial        = 0;                    % Current trial.
+    currCorrOpSky    = '';                   % Current correct sky slot machine option.
+    currCorrOpFruit  = '';                   % Current correct fruit slot machine option.
+    lastCorrOpSky    = '';                   % Last trial option that was correct for the sky slot machine.
+    lastCorrOpFruit  = '';                   % Last trial option that was correct for the fruit slot machine.
     redoFlag         = false;                % Indicates whether a trial is repeating.
     
     % ---------------------------------------------- %
     % ------------------- Setup -------------------- %
     % ---------------------------------------------- %
+    
+    % Make sure the "taskType" global variable has a legal value.
+    if ~strcmp(taskType, 'double') && ...
+       ~strcmp(taskType, 'singleSky') && ...
+       ~strcmp(taskType, 'singleFruit') && ...
+       ~strcmp(taskType, 'safeLeft') && ...
+       ~strcmp(taskType, 'safeRight')
+        disp('Error: The "taskType" global variable has an illegal value.');
+        disp('Legal values: "double", "singleSky", "singleFruit", "safeLeft", or "safeRight".');
+        
+        Screen('CloseAll');
+        
+        return;
+    end
+        
     
     disp('MAKE SURE TO TAKE IN MONKEY INITIAL');
     
@@ -203,7 +235,6 @@ function wilke_task()
     % ----------------- Functions ------------------ %
     % ---------------------------------------------- %
     
-    % TODO: Uses globals AND only two stimuli locations. Be careful using.
     % Determines if the eye has fixated within the given bounds
     % for the given duration before the given timeout occurs.
     function [fixation, area] = check_fixation(type, duration, timeout)
@@ -249,7 +280,7 @@ function wilke_task()
                         
                         return;
                     else
-                        draw_options('double');
+                        draw_options(taskType);
                         Screen('Flip', window);
                     end
                 % Determine if eye is within the moon option boundary.
@@ -269,7 +300,7 @@ function wilke_task()
                         
                         return;
                     else
-                        draw_options('double');
+                        draw_options(taskType);
                         Screen('Flip', window);
                     end
                 % Determine if eye is within the orange option boundary.
@@ -289,7 +320,7 @@ function wilke_task()
                         
                         return;
                     else
-                        draw_options('double');
+                        draw_options(taskType);
                         Screen('Flip', window);
                     end
                 % Determine if eye is within the apple option boundary.
@@ -309,18 +340,387 @@ function wilke_task()
                         
                         return;
                     else
-                        draw_options('double');
+                        draw_options(taskType);
+                        Screen('Flip', window);
+                    end
+                end
+            elseif strcmp(type, 'singleSky')
+                % Determine if eye is within the sun option boundary.
+                if xCoord >= sunBoundXMin && xCoord <= sunBoundXMax && ...
+                   yCoord >= sunBoundYMin && yCoord <= sunBoundYMax
+                    draw_feedback('sun', colorWhite);
+                    
+                    % Determine if eye maintained fixation for given duration.
+                    checkFixBreak = fix_break_check(sunBoundXMin, sunBoundXMax, ...
+                                                    sunBoundYMin, sunBoundYMax, ...
+                                                    duration);
+                    
+                    if checkFixBreak == false
+                        % Fixation was obtained for desired duration.
+                        fixation = true;
+                        area = 'sun';
+                        
+                        return;
+                    else
+                        draw_options(taskType);
+                        Screen('Flip', window);
+                    end
+                % Determine if eye is within the moon option boundary.
+                elseif xCoord >= moonBoundXMin && xCoord <= moonBoundXMax && ...
+                       yCoord >= moonBoundYMin && yCoord <= moonBoundYMax
+                    draw_feedback('moon', colorWhite);
+                    
+                    % Determine if eye maintained fixation for given duration.
+                    checkFixBreak = fix_break_check(moonBoundXMin, moonBoundXMax, ...
+                                                    moonBoundYMin, moonBoundYMax, ...
+                                                    duration);
+                    
+                    if checkFixBreak == false
+                        % Fixation was obtained for desired duration.
+                        fixation = true;
+                        area = 'moon';
+                        
+                        return;
+                    else
+                        draw_options(taskType);
+                        Screen('Flip', window);
+                    end
+                end
+            elseif strcmp(type, 'singleFruit')
+                % Determine if eye is within the orange option boundary.
+                if xCoord >= orangeBoundXMin && xCoord <= orangeBoundXMax && ...
+                   yCoord >= orangeBoundYMin && yCoord <= orangeBoundYMax
+                    draw_feedback('orange', colorWhite);
+                    
+                    % Determine if eye maintained fixation for given duration.
+                    checkFixBreak = fix_break_check(orangeBoundXMin, orangeBoundXMax, ...
+                                                    orangeBoundYMin, orangeBoundYMax, ...
+                                                    duration);
+                    
+                    if checkFixBreak == false
+                        % Fixation was obtained for desired duration.
+                        fixation = true;
+                        area = 'orange';
+                        
+                        return;
+                    else
+                        draw_options(taskType);
+                        Screen('Flip', window);
+                    end
+                % Determine if eye is within the apple option boundary.
+                elseif xCoord >= appleBoundXMin && xCoord <= appleBoundXMax && ...
+                       yCoord >= appleBoundYMin && yCoord <= appleBoundYMax
+                    draw_feedback('apple', colorWhite);
+                    
+                    % Determine if eye maintained fixation for given duration.
+                    checkFixBreak = fix_break_check(appleBoundXMin, appleBoundXMax, ...
+                                                    appleBoundYMin, appleBoundYMax, ...
+                                                    duration);
+                    
+                    if checkFixBreak == false
+                        % Fixation was obtained for desired duration.
+                        fixation = true;
+                        area = 'apple';
+                        
+                        return;
+                    else
+                        draw_options(taskType);
+                        Screen('Flip', window);
+                    end
+                end
+            elseif strcmp(type, 'safeLeft')
+                % Determine if eye is within the left safe option boundary.
+                if xCoord >= safeLBoundXMin && xCoord <= safeLBoundXMax && ...
+                   yCoord >= safeLBoundYMin && yCoord <= safeLBoundYMax
+                    draw_feedback('safeLeft', colorWhite);
+                    
+                    % Determine if eye maintained fixation for given duration.
+                    checkFixBreak = fix_break_check(safeLBoundXMin, safeLBoundXMax, ...
+                                                    safeLBoundYMin, safeLBoundYMax, ...
+                                                    duration);
+                    
+                    if checkFixBreak == false
+                        % Fixation was obtained for desired duration.
+                        fixation = true;
+                        area = 'safeLeft';
+                        
+                        return;
+                    else
+                        draw_options(taskType);
+                        Screen('Flip', window);
+                    end
+                % Determine if eye is within the orange option boundary.
+                elseif xCoord >= orangeBoundXMin && xCoord <= orangeBoundXMax && ...
+                       yCoord >= orangeBoundYMin && yCoord <= orangeBoundYMax
+                    draw_feedback('orange', colorWhite);
+                    
+                    % Determine if eye maintained fixation for given duration.
+                    checkFixBreak = fix_break_check(orangeBoundXMin, orangeBoundXMax, ...
+                                                    orangeBoundYMin, orangeBoundYMax, ...
+                                                    duration);
+                    
+                    if checkFixBreak == false
+                        % Fixation was obtained for desired duration.
+                        fixation = true;
+                        area = 'orange';
+                        
+                        return;
+                    else
+                        draw_options(taskType);
+                        Screen('Flip', window);
+                    end
+                % Determine if eye is within the apple option boundary.
+                elseif xCoord >= appleBoundXMin && xCoord <= appleBoundXMax && ...
+                       yCoord >= appleBoundYMin && yCoord <= appleBoundYMax
+                    draw_feedback('apple', colorWhite);
+                    
+                    % Determine if eye maintained fixation for given duration.
+                    checkFixBreak = fix_break_check(appleBoundXMin, appleBoundXMax, ...
+                                                    appleBoundYMin, appleBoundYMax, ...
+                                                    duration);
+                    
+                    if checkFixBreak == false
+                        % Fixation was obtained for desired duration.
+                        fixation = true;
+                        area = 'apple';
+                        
+                        return;
+                    else
+                        draw_options(taskType);
+                        Screen('Flip', window);
+                    end
+                end
+            elseif strcmp(type, 'safeRight')
+                % Determine if eye is within the right safe option boundary.
+                if xCoord >= safeRBoundXMin && xCoord <= safeRBoundXMax && ...
+                   yCoord >= safeRBoundYMin && yCoord <= safeRBoundYMax
+                    draw_feedback('safeRight', colorWhite);
+                    
+                    % Determine if eye maintained fixation for given duration.
+                    checkFixBreak = fix_break_check(safeRBoundXMin, safeRBoundXMax, ...
+                                                    safeRBoundYMin, safeRBoundYMax, ...
+                                                    duration);
+                    
+                    if checkFixBreak == false
+                        % Fixation was obtained for desired duration.
+                        fixation = true;
+                        area = 'safeRight';
+                        
+                        return;
+                    else
+                        draw_options(taskType);
+                        Screen('Flip', window);
+                    end
+                % Determine if eye is within the sun option boundary.
+                elseif xCoord >= sunBoundXMin && xCoord <= sunBoundXMax && ...
+                       yCoord >= sunBoundYMin && yCoord <= sunBoundYMax
+                    draw_feedback('sun', colorWhite);
+                    
+                    % Determine if eye maintained fixation for given duration.
+                    checkFixBreak = fix_break_check(sunBoundXMin, sunBoundXMax, ...
+                                                    sunBoundYMin, sunBoundYMax, ...
+                                                    duration);
+                    
+                    if checkFixBreak == false
+                        % Fixation was obtained for desired duration.
+                        fixation = true;
+                        area = 'sun';
+                        
+                        return;
+                    else
+                        draw_options(taskType);
+                        Screen('Flip', window);
+                    end
+                % Determine if eye is within the moon option boundary.
+                elseif xCoord >= moonBoundXMin && xCoord <= moonBoundXMax && ...
+                       yCoord >= moonBoundYMin && yCoord <= moonBoundYMax
+                    draw_feedback('moon', colorWhite);
+                    
+                    % Determine if eye maintained fixation for given duration.
+                    checkFixBreak = fix_break_check(moonBoundXMin, moonBoundXMax, ...
+                                                    moonBoundYMin, moonBoundYMax, ...
+                                                    duration);
+                    
+                    if checkFixBreak == false
+                        % Fixation was obtained for desired duration.
+                        fixation = true;
+                        area = 'moon';
+                        
+                        return;
+                    else
+                        draw_options(taskType);
                         Screen('Flip', window);
                     end
                 end
             else
                 disp('Fixation being checked with an illegal value for the "type" parameter.');
+                disp('Make sure the "taskType" global variable value is correct.');
             end
         end
         
         % Timeout reached.
         fixation = false;
         area = 'none';
+    end
+    
+    function choose_correct_options()
+        optionsSky = [{'sun'}, {'moon'}];
+        optionsFruit = [{'orange'}, {'apple'}];
+        randInt = rand_int(2);
+        
+        % Choose correct options randomly if on first trial.
+        if currTrial == 1
+            if strcmp(taskType, 'double')
+                % Select a correct choice for the sky slot machine.
+                currCorrOpSky = char(optionsSky(randInt));
+                lastCorrOpSky = currCorrOpSky;
+                
+                % Select a correct choice for the fruit slot machine.
+                currCorrOpFruit = char(optionsFruit(randInt));
+                lastCorrOpFruit = currCorrOpFruit;
+            elseif strcmp(taskType, 'singleSky') || strcmp(taskType, 'safeRight')
+                % Select a correct choice for the sky slot machine.
+                currCorrOpSky = char(optionsSky(randInt));
+                lastCorrOpSky = currCorrOpSky;
+            elseif strcmp(taskType, 'singleFruit') || strcmp(taskType, 'safeLeft')
+                % Select a correct choice for the fruit slot machine.
+                currCorrOpFruit = char(optionsFruit(randInt));
+                lastCorrOpFruit = currCorrOpFruit;
+            end
+        else
+            if strcmp(taskType, 'double')
+                % Select a correct choice for the sky and fruit slot machines.
+                if correlation < 0
+                    randVal1 = rand;
+                    randVal2 = rand;
+                    
+                    % Make the sky correct choice opposite of the last correct choice.
+                    if randVal1 < (correlation * -1)
+                        if strcmp(lastCorrOpSky, 'sun')
+                            currCorrOpSky = 'moon';
+                        else
+                            currCorrOpSky = 'sun';
+                        end
+                        
+                        lastCorrOpSky = currCorrOpSky;
+                    % Otherwise, make the sky correct choice random.
+                    else
+                        currCorrOpSky = char(optionsSky(randInt));
+                        lastCorrOpSky = currCorrOpSky;
+                    end
+                    
+                    % Make the fruit correct choice opposite of the last correct choice.
+                    if randVal2 < (correlation * -1)
+                        if strcmp(lastCorrOpFruit, 'orange')
+                            currCorrOpFruit = 'apple';
+                        else
+                            currCorrOpFruit = 'orange';
+                        end
+                        
+                        lastCorrOpFruit = currCorrOpFruit;
+                    % Otherwise, make the fruit correct choice random.
+                    else
+                        currCorrOpFruit = char(optionsFruit(randInt));
+                        lastCorrOpFruit = currCorrOpFruit;
+                    end
+                elseif correlation == 0
+                    currCorrOpSky = char(optionsSky(randInt));
+                    lastCorrOpSky = currCorrOpSky;
+                    
+                    currCorrOpFruit = char(optionsFruit(randInt));
+                    lastCorrOpFruit = currCorrOpFruit;
+                elseif correlation > 0
+                    randVal1 = rand;
+                    randVal2 = rand;
+                    
+                    % Make the sky correct choice the same as the last correct choice.
+                    if randVal1 < correlation
+                        currCorrOpSky = lastCorrOpSky;
+                    % Otherwise, make the sky correct choice random.
+                    else
+                        currCorrOpSky = char(optionsSky(randInt));
+                        lastCorrOpSky = currCorrOpSky;
+                    end
+                    
+                    % Make the fruit correct choice the same as the last correct choice.
+                    if randVal2 < correlation
+                        currCorrOpFruit = lastCorrOpFruit;
+                    % Otherwise, make the fruit correct choice random.
+                    else
+                        currCorrOpFruit = char(optionsFruit(randInt));
+                        lastCorrOpFruit = currCorrOpFruit;
+                    end
+                end
+            elseif strcmp(taskType, 'singleSky') || strcmp(taskType, 'safeRight')
+                % Select a correct choice for the sky and fruit slot machines.
+                if correlation < 0
+                    randVal = rand;
+                    
+                    % Make the sky correct choice opposite of the last correct choice.
+                    if randVal < (correlation * -1)
+                        if strcmp(lastCorrOpSky, 'sun')
+                            currCorrOpSky = 'moon';
+                        else
+                            currCorrOpSky = 'sun';
+                        end
+                        
+                        lastCorrOpSky = currCorrOpSky;
+                    % Otherwise, make the sky correct choice random.
+                    else
+                        currCorrOpSky = char(optionsSky(randInt));
+                        lastCorrOpSky = currCorrOpSky;
+                    end
+                elseif correlation == 0
+                    currCorrOpSky = char(optionsSky(randInt));
+                    lastCorrOpSky = currCorrOpSky;
+                elseif correlation > 0
+                    randVal = rand;
+                    
+                    % Make the sky correct choice the same as the last correct choice.
+                    if randVal < correlation
+                        currCorrOpSky = lastCorrOpSky;
+                    % Otherwise, make the sky correct choice random.
+                    else
+                        currCorrOpSky = char(optionsSky(randInt));
+                        lastCorrOpSky = currCorrOpSky;
+                    end
+                end
+            elseif strcmp(taskType, 'singleFruit') || strcmp(taskType, 'safeLeft')
+                % Select a correct choice for the sky and fruit slot machines.
+                if correlation < 0
+                    randVal = rand;
+                    
+                    % Make the fruit correct choice opposite of the last correct choice.
+                    if randVal < (correlation * -1)
+                        if strcmp(lastCorrOpFruit, 'orange')
+                            currCorrOpFruit = 'apple';
+                        else
+                            currCorrOpFruit = 'orange';
+                        end
+                        
+                        lastCorrOpFruit = currCorrOpFruit;
+                    % Otherwise, make the fruit correct choice random.
+                    else
+                        currCorrOpFruit = char(optionsFruit(randInt));
+                        lastCorrOpFruit = currCorrOpFruit;
+                    end
+                elseif correlation == 0
+                    currCorrOpFruit = char(optionsFruit(randInt));
+                    lastCorrOpFruit = currCorrOpFruit;
+                elseif correlation > 0
+                    randVal = rand;
+                    
+                    % Make the fruit correct choice the same as the last correct choice.
+                    if randVal < correlation
+                        currCorrOpFruit = lastCorrOpFruit;
+                    % Otherwise, make the fruit correct choice random.
+                    else
+                        currCorrOpFruit = char(optionsFruit(randInt));
+                        lastCorrOpFruit = currCorrOpFruit;
+                    end
+                end
+            end
+        end
     end
     
     % Draw colored outlines around options for feedback.
@@ -376,10 +776,10 @@ function wilke_task()
     
     % Draws the fixation point on the screen.
     function draw_fixation_point(color)
-        Screen('FillRect', window, color, [centerX - dotRadius + fixAdj; ...
-                                           centerY - dotRadius; ...
-                                           centerX + dotRadius - fixAdj; ...
-                                           centerY + dotRadius]);
+        Screen('FillRect', window, color, [centerX - pointRadius; ...
+                                           centerY - pointRadius; ...
+                                           centerX + pointRadius; ...
+                                           centerY + pointRadius]);
     end
     
     function draw_options(type)
@@ -645,9 +1045,10 @@ function wilke_task()
     end
     
     function run_single_trial()
-        % Increment trial counter only if this trial is not a repeated trial.
+        % Stuff to do only if this trial is not a repeated trial.
         if ~redoFlag
             currTrial = currTrial + 1;
+            choose_correct_options;
         end
         
         % Fixation dot appears.
@@ -659,7 +1060,7 @@ function wilke_task()
         
         if fixating
             % Turn all options on.
-            draw_options('double');
+            draw_options(taskType);
             draw_fixation_point(colorYellow);
             Screen('Flip', window);
             
@@ -680,7 +1081,7 @@ function wilke_task()
                 redoFlag = false;
                 
                 % Turn all options on without a fixation point.
-                draw_options('double');
+                draw_options(taskType);
                 Screen('Flip', window);
                 
                 % Choice period. Check for choice fixations on any four options.
@@ -691,9 +1092,16 @@ function wilke_task()
                     
                     % Do appropriate action for choices.
                     if fixatingOnTarget
-                        % Spin options.
+                        % Flash choice feedback border.
+                        draw_feedback(area, colorCyan);
+                        WaitSecs(feedbackTime);
+                        draw_options(taskType);
+                        Screen('Flip', window);
                         
-                        % Give feedback.
+                        % Flicker options in gray area.
+                        spin_slot_machines(area);
+                        
+                        % Give reward feedback.
                     end
                 end
             end
@@ -758,5 +1166,216 @@ function wilke_task()
         
         % Setup a screen for displaying stimuli for this session.
         window = Screen('OpenWindow', monkeyScreen, colorBackground);
+    end
+
+    function spin_slot_machines(area)
+        % Set values for first images displayed in image spins.
+        optionsSky = [{'sun'}, {'moon'}];
+        optionsFruit = [{'orange'}, {'apple'}];
+        randInt1 = rand_int(2);
+        randInt2 = rand_int(2);
+        optionSky = char(optionsSky(randInt1));
+        optionFruit = char(optionsFruit(randInt2));
+        
+        if strcmp(taskType, 'double')
+            startTime = GetSecs;
+            while (GetSecs - startTime) < spinTime
+                % Set values for displaying images.
+                if strcmp(optionSky, 'sun')
+                    skyImage = imgSun;
+                else
+                    skyImage = imgMoon;
+                end
+                
+                if strcmp(optionFruit, 'orange')
+                    fruitImage = imgOrange;
+                else
+                    fruitImage = imgApple;
+                end
+                
+                % Flash images to simulate spin.
+                if showUnchosen
+                    draw_options(taskType);
+                    Screen('PutImage', window, skyImage, [leftSpinPosXMin, leftSpinPosYMin, ...
+                                                          leftSpinPosXMax, leftSpinPosYMax]);
+                    Screen('PutImage', window, fruitImage, [rightSpinPosXMin, rightSpinPosYMin, ...
+                                                            rightSpinPosXMax, rightSpinPosYMax]);
+                    Screen('Flip', window);
+                    WaitSecs(flashInterval);
+                else
+                    draw_options(taskType);
+                    if strcmp(area, 'sun') || strcmp(area, 'moon')
+                        Screen('PutImage', window, skyImage, [leftSpinPosXMin, leftSpinPosYMin, ...
+                                                              leftSpinPosXMax, leftSpinPosYMax]);
+                    else
+                        Screen('PutImage', window, fruitImage, [rightSpinPosXMin, rightSpinPosYMin, ...
+                                                                rightSpinPosXMax, rightSpinPosYMax]);
+                    end
+                    Screen('Flip', window);
+                    WaitSecs(flashInterval);
+                end
+
+                % Flip displayed image values for next cycle.
+                if strcmp(optionSky, 'sun')
+                    optionSky = 'moon';
+                else
+                    optionSky = 'sun';
+                end
+
+                if strcmp(optionFruit, 'orange')
+                    optionFruit = 'apple';
+                else
+                    optionFruit = 'orange';
+                end
+            end
+
+            % After all spinning is done, show actual correct values.
+            if strcmp(currCorrOpSky, 'sun') && strcmp(currCorrOpFruit, 'orange')
+                draw_options(taskType);
+                if showUnchosen
+                    Screen('PutImage', window, imgSun, [leftSpinPosXMin, leftSpinPosYMin, ...
+                                                        leftSpinPosXMax, leftSpinPosYMax]);
+                    Screen('PutImage', window, imgOrange, [rightSpinPosXMin, rightSpinPosYMin, ...
+                                                           rightSpinPosXMax, rightSpinPosYMax]);
+                else
+                    if strcmp(area, 'sun') || strcmp(area, 'moon')
+                        Screen('PutImage', window, imgSun, [leftSpinPosXMin, leftSpinPosYMin, ...
+                                                            leftSpinPosXMax, leftSpinPosYMax]);
+                    else
+                        Screen('PutImage', window, imgOrange, [rightSpinPosXMin, rightSpinPosYMin, ...
+                                                               rightSpinPosXMax, rightSpinPosYMax]);
+                    end
+                end
+                Screen('Flip', window);
+            elseif strcmp(currCorrOpSky, 'sun') && strcmp(currCorrOpFruit, 'apple')
+                draw_options(taskType);
+                if showUnchosen
+                    Screen('PutImage', window, imgSun, [leftSpinPosXMin, leftSpinPosYMin, ...
+                                                        leftSpinPosXMax, leftSpinPosYMax]);
+                    Screen('PutImage', window, imgApple, [rightSpinPosXMin, rightSpinPosYMin, ...
+                                                          rightSpinPosXMax, rightSpinPosYMax]);
+                else
+                    if strcmp(area, 'sun') || strcmp(area, 'moon')
+                        Screen('PutImage', window, imgSun, [leftSpinPosXMin, leftSpinPosYMin, ...
+                                                            leftSpinPosXMax, leftSpinPosYMax]);
+                    else
+                        Screen('PutImage', window, imgApple, [rightSpinPosXMin, rightSpinPosYMin, ...
+                                                              rightSpinPosXMax, rightSpinPosYMax]);
+                    end
+                end
+                Screen('Flip', window);
+            elseif strcmp(currCorrOpSky, 'moon') && strcmp(currCorrOpFruit, 'orange')
+                draw_options(taskType);
+                if showUnchosen
+                    Screen('PutImage', window, imgMoon, [leftSpinPosXMin, leftSpinPosYMin, ...
+                                                         leftSpinPosXMax, leftSpinPosYMax]);
+                    Screen('PutImage', window, imgOrange, [rightSpinPosXMin, rightSpinPosYMin, ...
+                                                           rightSpinPosXMax, rightSpinPosYMax]);
+                else
+                    if strcmp(area, 'sun') || strcmp(area, 'moon')
+                        Screen('PutImage', window, imgMoon, [leftSpinPosXMin, leftSpinPosYMin, ...
+                                                             leftSpinPosXMax, leftSpinPosYMax]);
+                    else
+                        Screen('PutImage', window, imgOrange, [rightSpinPosXMin, rightSpinPosYMin, ...
+                                                               rightSpinPosXMax, rightSpinPosYMax]);
+                    end
+                end
+                Screen('Flip', window);
+            elseif strcmp(currCorrOpSky, 'moon') && strcmp(currCorrOpFruit, 'apple')
+                draw_options(taskType);
+                if showUnchosen
+                    Screen('PutImage', window, imgMoon, [leftSpinPosXMin, leftSpinPosYMin, ...
+                                                         leftSpinPosXMax, leftSpinPosYMax]);
+                    Screen('PutImage', window, imgApple, [rightSpinPosXMin, rightSpinPosYMin, ...
+                                                          rightSpinPosXMax, rightSpinPosYMax]);
+                else
+                    if strcmp(area, 'sun') || strcmp(area, 'moon')
+                        Screen('PutImage', window, imgMoon, [leftSpinPosXMin, leftSpinPosYMin, ...
+                                                             leftSpinPosXMax, leftSpinPosYMax]);
+                    else
+                        Screen('PutImage', window, imgApple, [rightSpinPosXMin, rightSpinPosYMin, ...
+                                                              rightSpinPosXMax, rightSpinPosYMax]);
+                    end
+                end
+                Screen('Flip', window);
+            end
+        elseif strcmp(taskType, 'singleSky') || strcmp(taskType, 'safeRight')
+            if showUnchosen || strcmp(area, 'sun') || strcmp(area, 'moon')
+                startTime = GetSecs;
+                while (GetSecs - startTime) < spinTime
+                    % Set values for displaying images.
+                    if strcmp(optionSky, 'sun')
+                        skyImage = imgSun;
+                    else
+                        skyImage = imgMoon;
+                    end
+
+                    % Flash images to simulate spin.
+                    draw_options(taskType);
+                    Screen('PutImage', window, skyImage, [leftSpinPosXMin, leftSpinPosYMin, ...
+                                                          leftSpinPosXMax, leftSpinPosYMax]);
+                    Screen('Flip', window);
+                    WaitSecs(flashInterval);
+                    
+                    % Flip displayed image values for next cycle.
+                    if strcmp(optionSky, 'sun')
+                        optionSky = 'moon';
+                    else
+                        optionSky = 'sun';
+                    end
+                end
+
+                % After all spinning is done, show actual correct values.
+                if strcmp(currCorrOpSky, 'sun')
+                    draw_options(taskType);
+                    Screen('PutImage', window, imgSun, [leftSpinPosXMin, leftSpinPosYMin, ...
+                                                        leftSpinPosXMax, leftSpinPosYMax]);
+                    Screen('Flip', window);
+                elseif strcmp(currCorrOpSky, 'moon')
+                    draw_options(taskType);
+                    Screen('PutImage', window, imgMoon, [leftSpinPosXMin, leftSpinPosYMin, ...
+                                                         leftSpinPosXMax, leftSpinPosYMax]);
+                    Screen('Flip', window);
+                end
+            end
+        elseif strcmp(taskType, 'singleFruit') || strcmp(taskType, 'safeLeft')
+            if showUnchosen || strcmp(area, 'orange') || strcmp(area, 'apple')
+                startTime = GetSecs;
+                while (GetSecs - startTime) < spinTime
+                    % Set values for displaying images.
+                    if strcmp(optionFruit, 'orange')
+                        fruitImage = imgOrange;
+                    else
+                        fruitImage = imgApple;
+                    end
+
+                    % Flash images to simulate spin.
+                    draw_options(taskType);
+                    Screen('PutImage', window, fruitImage, [rightSpinPosXMin, rightSpinPosYMin, ...
+                                                            rightSpinPosXMax, rightSpinPosYMax]);
+                    Screen('Flip', window);
+                    WaitSecs(flashInterval);
+                    
+                    if strcmp(optionFruit, 'orange')
+                        optionFruit = 'apple';
+                    else
+                        optionFruit = 'orange';
+                    end
+                end
+
+                % After all spinning is done, show actual correct values.
+                if strcmp(currCorrOpFruit, 'orange')
+                    draw_options(taskType);
+                    Screen('PutImage', window, imgOrange, [rightSpinPosXMin, rightSpinPosYMin, ...
+                                                           rightSpinPosXMax, rightSpinPosYMax]);
+                    Screen('Flip', window);
+                elseif strcmp(currCorrOpFruit, 'apple')
+                    draw_options(taskType);
+                    Screen('PutImage', window, imgApple, [rightSpinPosXMin, rightSpinPosYMin, ...
+                                                          rightSpinPosXMax, rightSpinPosYMax]);
+                    Screen('Flip', window);
+                end
+            end
+        end
     end
 end
