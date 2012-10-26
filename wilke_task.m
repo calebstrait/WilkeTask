@@ -16,9 +16,18 @@ function wilke_task()
       taskType     = 'safeLeft';           % Values: 'double', 'singleSky',
                                            %         'singleFruit', 'safeLeft', or
                                            %         'safeRight'.
+      
       correlation  = 0;                    % Values: Floating point numbers between
                                            %         -1 and 1 inclusive.
-      showUnchosen = false;                % Values: true or false.
+      
+      showUnchosen = true;                 % Values: true or false.
+      
+      rewardPause  = 0.1;                  % Values: Floating point number.
+      
+      safeRewards  = [0.08];               % Values: An array of floating point numbers.
+      
+      rewardArray  = [0.1, 1.0];           % Values: An array of floating point numbers
+      
       trackedEye   = 1;                    % Values: 1 (left eye), 2 (right eye).
       
     % @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ %
@@ -183,9 +192,6 @@ function wilke_task()
         
         return;
     end
-        
-    
-    disp('MAKE SURE TO TAKE IN MONKEY INITIAL');
     
     % Load images.
     imgApple = imread('images/apple.jpg', 'jpg');
@@ -871,7 +877,6 @@ function wilke_task()
         fixationBreak = false;
     end
     
-    % TODO: Change back to eye (not mouse) control.
     % Returns the current x and y coordinants of the given eye.
     function [xCoord, yCoord] = get_eye_coords()
         %{
@@ -1012,7 +1017,7 @@ function wilke_task()
     % Rewards monkey using the juicer with the array of passed duration(s).
     function reward(rewardDurationsArray)
         % Get a reference the juicer device and set reward duration.
-        daq = DaqDeviceIndex;
+        % daq = DaqDeviceIndex;
         
         % Determine if multiple rewards should be given.
         numOfRewards = size(rewardDurationsArray, 2);
@@ -1024,7 +1029,7 @@ function wilke_task()
         
         for index = 1:numOfRewards
             % Open juicer.
-            DaqAOut(daq, 0, .6);
+            % DaqAOut(daq, 0, .6);
             
             % Keep looping to keep juicer open until reward end.
             startTime = GetSecs;
@@ -1032,7 +1037,7 @@ function wilke_task()
             end
             
             % Close juicer.
-            DaqAOut(daq, 0, 0);
+            % DaqAOut(daq, 0, 0);
             
             % Pause between multiple rewards.
             if multRewards
@@ -1101,7 +1106,18 @@ function wilke_task()
                         % Flicker options in gray area.
                         spin_slot_machines(area);
                         
-                        % Give reward feedback.
+                        % Give reward feedback if earned.
+                        if strcmp(area, 'sun') || strcmp(area, 'moon')
+                            if strcmp(area, currCorrOpSky)
+                                reward(rewardArray);
+                            end
+                        elseif strcmp(area, 'orange') || strcmp(area, 'apple')
+                            if strcmp(area, currCorrOpFruit)
+                                reward(rewardArray);
+                            end
+                        elseif strcmp(area, 'safeLeft') || strcmp(area, 'safeRight')
+                            reward(safeRewards);
+                        end
                     end
                 end
             end
