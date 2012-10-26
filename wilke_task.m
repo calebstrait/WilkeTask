@@ -1,6 +1,6 @@
 % Copyright (c) 2012 University of Rochester
 
-function wilke_task()
+function wilke_task(monkeysInitial)
     % ---------------------------------------------- %
     % -------------- Global variables -------------- %
     % ---------------------------------------------- %
@@ -13,7 +13,7 @@ function wilke_task()
     % @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ %
     % @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ %
       
-      taskType        = 'safeLeft';             % Values: 'double', 'singleSky',
+      taskType        = 'double';             % Values: 'double', 'singleSky',
                                               %         'singleFruit', 'safeLeft', or
                                               %         'safeRight'.
       
@@ -142,6 +142,7 @@ function wilke_task()
     monkeyScreen     = 0;                    % Number of the screen the monkey sees.
     
     % Saving.
+    choiceCorrect    = '';                   % Whether the subject chose correctly.
     choiceMade       = '';                   % Which option was chosen.
     choiceMachine    = '';                   % Which slot machine was chosen.
     data             = struct([]);           % Workspace variable where trial data is saved.
@@ -155,7 +156,7 @@ function wilke_task()
     numChoseSun      = 0;                    % Times sky slot machine was chosen.
     numCorrTimes     = 0;                    % Times correct option chosen.
     percentCApple    = 0;                    % Percent apple option chosen.
-    percentCCorect   = 0;                    % Percent correct choice chosen.
+    percentCCorrect  = 0;                    % Percent correct choice chosen.
     percentCFruit    = 0;                    % Percent fruit slot machine chosen.
     percentCMoon     = 0;                    % Percent moon option chosen.
     percentCOrange   = 0;                    % Percent orange option chosen.
@@ -163,7 +164,7 @@ function wilke_task()
     percentCSafeR    = 0;                    % Percent right safe option chosen.
     percentCSky      = 0;                    % Percent sky slot machine chosen.
     percentCSun      = 0;                    % Percent sun option chosen.
-    rewardRepeatData = '/Data/WilkeTask';    % Directory where .mat files are saved.
+    wilkeTaskData    = '/Data/WilkeTask';    % Directory where .mat files are saved.
     saveCommand      = NaN;                  % Command string that will save .mat files.
     varName          = 'data';               % Name of the variable to save in the workspace.
     
@@ -182,6 +183,7 @@ function wilke_task()
     
     % Trial.
     currTrial        = 0;                    % Current trial.
+    currCorrChoice   = '';                   % Correct choice that computer chooses.
     currCorrOpSky    = '';                   % Current correct sky slot machine option.
     currCorrOpFruit  = '';                   % Current correct fruit slot machine option.
     lastCorrOpSky    = '';                   % Last trial option that was correct for the sky slot machine.
@@ -213,13 +215,13 @@ function wilke_task()
     imgMoon = imread('images/moon.jpg', 'jpg');
     
     % Saving.
-    % prepare_for_saving;
+    prepare_for_saving;
     
     % Window.
     window = setup_window;
     
     % Eyelink.
-    % setup_eyelink;
+    setup_eyelink;
     
     % ---------------------------------------------- %
     % ------------ Main experiment loop ------------ %
@@ -229,7 +231,7 @@ function wilke_task()
     while running
         run_single_trial;
         
-        % print_stats;
+        print_stats;
         
         % Check for pausing or quitting during ITI.
         startingTime = GetSecs;
@@ -785,14 +787,6 @@ function wilke_task()
         Screen('Flip', window);
     end
     
-    % TODO: Uses globals. Make sure they are what you think they are.
-    % Draws a thin line on top of the invisible fixation boundaries.
-    function draw_fixation_bounds()
-        Screen('FrameRect', window, colorYellow, [fixBoundXMin fixBoundYMin ...
-                                                  fixBoundXMax fixBoundYMax], 1);
-        Screen('Flip', window);
-    end
-    
     % Draws the fixation point on the screen.
     function draw_fixation_point(color)
         Screen('FillRect', window, color, [centerX - pointRadius; ...
@@ -892,13 +886,13 @@ function wilke_task()
     
     % Returns the current x and y coordinants of the given eye.
     function [xCoord, yCoord] = get_eye_coords()
-        %{
+        % Uncomment the following 1 line for mouse control.
+        % [xCoord, yCoord, ~, ~, ~, ~] = GetMouse(window);
+        
+        % Comment out the following 3 lines for mouse control.
         sampledPosition = Eyelink('NewestFloatSample');
         xCoord = sampledPosition.gx(trackedEye);
         yCoord = sampledPosition.gy(trackedEye);
-        %}
-        
-        [xCoord, yCoord, ~, ~, ~, ~] = GetMouse(window);
     end
     
     % Checks to see what key was pressed.
@@ -927,10 +921,9 @@ function wilke_task()
         end
     end
     
-    % TODO: Make sure files/folders are correct.
     % Makes a folder and file where data will be saved.
     function prepare_for_saving()
-        cd(rewardRepeatData);
+        cd(wilkeTaskData);
         
         % Check if cell ID was passed in with monkey's initial.
         if numel(monkeysInitial) == 1
@@ -942,7 +935,7 @@ function wilke_task()
         end
         
         dateStr = datestr(now, 'yymmdd');
-        filename = [initial dateStr '.' cell '1.RR.mat'];
+        filename = [initial dateStr '.' cell '1.WT.mat'];
         folderNameDay = [initial dateStr];
         
         % Make and/or enter a folder where .mat files will be saved.
@@ -958,7 +951,7 @@ function wilke_task()
         while fileNum ~= 0
             if exist(filename, 'file') == 2
                 fileNum = fileNum + 1;
-                filename = [initial dateStr '.' cell num2str(fileNum) '.RR.mat'];
+                filename = [initial dateStr '.' cell num2str(fileNum) '.WT.mat'];
             else
                 fileNum = 0;
             end
@@ -969,25 +962,76 @@ function wilke_task()
     
     % Prints current trial stats.
     function print_stats()
-        % TODO: Update to print stats for this task.
         % Convert percentages to strings.
-        percentChoseImgStr = strcat(num2str(percentChoseImg), '%');
-        percentCorrStr = strcat(num2str(percentCorrect), '%');
+        percentCAppleStr = strcat(num2str(percentCApple), '%');
+        percentCCorrectStr = strcat(num2str(percentCCorrect), '%');
+        percentCFruitStr = strcat(num2str(percentCFruit), '%');
+        percentCMoonStr = strcat(num2str(percentCMoon), '%');
+        percentCOrangeStr = strcat(num2str(percentCOrange), '%');
+        percentCSafeLStr = strcat(num2str(percentCSafeL), '%');
+        percentCSafeRStr = strcat(num2str(percentCSafeR), '%');
+        percentCSkyStr = strcat(num2str(percentCSky), '%');
+        percentCSunStr = strcat(num2str(percentCSun), '%');
         trialCountStr = num2str(currTrial);
+        correlationStr = num2str(correlation);
         
         home;
         disp('             ');
         disp('****************************************');
         disp('             ');
-        fprintf('Total trials: % s', trialCountStr);
+        fprintf('Trial: % s', trialCountStr);
+        disp('             ');
+        fprintf('Task: % s', taskType);
+        disp('             ');
+        fprintf('Correlation: % s', correlationStr);
+        disp('             ');
+        fprintf('Correct: % s', percentCCorrectStr);
         disp('             ');
         disp('             ');
         disp('----------------------------------------');
         disp('             ');
-        fprintf('Total correct: % s', percentCorrStr);
-        disp('             ');
-        fprintf('Chose image: % s', percentChoseImgStr);
-        disp('             ');
+        
+        if strcmp(taskType, 'double')
+            fprintf('Sky: % s', percentCSkyStr);
+            disp('             ');
+            fprintf('Sun: % s', percentCSunStr);
+            disp('             ');
+            fprintf('Moon: % s', percentCMoonStr);
+            disp('             ');
+            fprintf('Fruit: % s', percentCFruitStr);
+            disp('             ');
+            fprintf('Orange: % s', percentCOrangeStr);
+            disp('             ');
+            fprintf('Apple: % s', percentCAppleStr);
+            disp('             ');
+        elseif strcmp(taskType, 'singleSky')
+            fprintf('Sun: % s', percentCSunStr);
+            disp('             ');
+            fprintf('Moon: % s', percentCMoonStr);
+            disp('             ');
+        elseif strcmp(taskType, 'singleFruit')
+            fprintf('Orange: % s', percentCOrangeStr);
+            disp('             ');
+            fprintf('Apple: % s', percentCAppleStr);
+            disp('             ');
+        elseif strcmp(taskType, 'safeLeft')
+            fprintf('Safe: % s', percentCSafeLStr);
+            disp('             ');
+            fprintf('Fruit: % s', percentCFruitStr);
+            disp('             ');
+            fprintf('Orange: % s', percentCOrangeStr);
+            disp('             ');
+            fprintf('Apple: % s', percentCAppleStr);
+            disp('             ');
+        elseif strcmp(taskType, 'safeRight')
+            fprintf('Safe: % s', percentCSafeRStr);
+            disp('             ');
+            fprintf('Sun: % s', percentCSunStr);
+            disp('             ');
+            fprintf('Moon: % s', percentCMoonStr);
+            disp('             ');
+        end
+        
         disp('             ');
         disp('****************************************');
     end
@@ -1038,10 +1082,10 @@ function wilke_task()
         end
         
         % Get a reference the juicer device and set reward duration.
-        % daq = DaqDeviceIndex;
+        daq = DaqDeviceIndex;
         
         % Open juicer.
-        % DaqAOut(daq, 0, .6);
+        DaqAOut(daq, 0, .6);
 
         % Keep looping to keep juicer open until reward end.
         startTime = GetSecs;
@@ -1049,7 +1093,7 @@ function wilke_task()
         end
 
         % Close juicer.
-        % DaqAOut(daq, 0, 0);
+        DaqAOut(daq, 0, 0);
     end
     
     function run_single_trial()
@@ -1114,10 +1158,17 @@ function wilke_task()
                             if strcmp(area, currCorrOpSky)
                                 reward(rewardDuration);
                                 numCorrTimes = numCorrTimes + 1;
+                                choiceCorrect = 'yes';
+                            else
+                                choiceCorrect = 'no';
                             end
                             
                             % Updates.
                             numChoseSky = numChoseSky + 1;
+                            choiceMachine = 'sky';
+                            choiceMade = area;
+                            currCorrChoice = currCorrOpSky;
+                            
                             if strcmp(area, 'sun')
                                 numChoseSun = numChoseSun + 1;
                             else
@@ -1127,10 +1178,17 @@ function wilke_task()
                             if strcmp(area, currCorrOpFruit)
                                 reward(rewardDuration);
                                 numCorrTimes = numCorrTimes + 1;
+                                choiceCorrect = 'yes';
+                            else
+                                choiceCorrect = 'no';
                             end
                             
                             % Updates.
                             numChoseFruit = numChoseFruit + 1;
+                            choiceMachine = 'fruit';
+                            choiceMade = area;
+                            currCorrChoice = currCorrOpFruit;
+                            
                             if strcmp(area, 'orange')
                                 numChoseOrange = numChoseOrange + 1;
                             else
@@ -1140,12 +1198,31 @@ function wilke_task()
                             reward(safeRewards);
                             
                             % Updates.
+                            choiceMachine = 'safe';
+                            choiceMade = area;
+                            choiceCorrect = 'no';
+                            
                             if strcmp(area, 'safeLeft')
                                 numChoseSafeL = numChoseSafeL + 1;
+                                currCorrChoice = currCorrOpFruit;
                             else
                                 numChoseSafeR = numChoseSafeR + 1;
+                                currCorrChoice = currCorrOpSky;
                             end
                         end
+                        
+                        % Update percentages.
+                        percentCSky = round(numChoseSky / currTrial * 100);
+                        percentCFruit = round(numChoseFruit / currTrial * 100);
+                        percentCCorrect = round(numCorrTimes / currTrial * 100);
+                        percentCOrange = round(numChoseOrange / currTrial * 100);
+                        percentCApple = round(numChoseApple / currTrial * 100);
+                        percentCSun = round(numChoseSun / currTrial * 100);
+                        percentCMoon = round(numChoseMoon / currTrial * 100);
+                        percentCSafeL = round(numChoseSafeL / currTrial * 100);
+                        percentCSafeR = round(numChoseSafeR / currTrial * 100);
+                        
+                        save_trial_data;
                     end
                 end
             end
@@ -1157,9 +1234,58 @@ function wilke_task()
     
     % Saves trial data to a .mat file.
     function save_trial_data()
-        % TODO: Update/add saved variables relevant variables.
         % Save variables to a .mat file.
-        data(currTrial).trial = currTrial;
+        data(currTrial).trial = currTrial;       %#ok<SETNU>   % Current trial.
+        data(currTrial).taskType = taskType;                   % Which of the 5 task types this task is.
+        data(currTrial).machineChosen = choiceMachine;         % Which slot machine was chosen (can be the safe option).
+        data(currTrial).optionChosen = choiceMade;             % Which option was chosen.
+        data(currTrial).currCorrChoice = currCorrChoice;       % Which choice is currently correct for the machine chosen.
+        data(currTrial).choiceCorrect = choiceCorrect;         % Whether or not the subject's choice is correct.
+        data(currTrial).correlation = correlation;             % What is the correlation set for this experiment.
+        data(currTrial).rewardDuration = rewardDuration;       % What is the usual reward duration (single value).
+        data(currTrial).safeRewards = safeRewards;             % Array of reward durations that the safe reward is chosen from.
+        data(currTrial).showUnchosen = showUnchosen;           % Whether or not the unselected machine shows its result.
+        data(currTrial).chooseHoldTime = chooseHoldTime;       % How long subject must look at choice to select it.
+        data(currTrial).feedbackTime = feedbackTime;           % Time option selected feedback border is given.
+        data(currTrial).flashInterval = flashInterval;         % Time between fame redraws when options are spinning.
+        data(currTrial).ITI = ITI;                             % Intertrial interval.
+        data(currTrial).initHoldFixTime = initHoldFixTime;     % Time fixation must be held before choosing an option.
+        data(currTrial).minFixTime = minFixTime;               % Minimum time monkey must fixate to start trial.
+        data(currTrial).spinTime = spinTime;                   % How long the slot machine options spin.
+        data(currTrial).timeToFix = timeToFix;                 % Amount of time monkey is given to fixate.
+        data(currTrial).trackedEye = trackedEye;               % The tracked eye.
+        
+        if strcmp(taskType, 'double')
+            data(currTrial).percentCSky = percentCSky;         % Percent the sky machine has been chosen so far.
+            data(currTrial).percentCSun = percentCSun;         % Percent the sun option has been chosen so far.
+            data(currTrial).percentCMoon = percentCMoon;       % Percent the moon option has been chosen so far.
+            data(currTrial).percentCFruit = percentCFruit;     % Percent the fruit machine has been chosen so far.
+            data(currTrial).percentCOrange = percentCOrange;   % Percent the orange option has been chosen so far.
+            data(currTrial).percentCApple = percentCApple;     % Percent the apple option has been chosen so far.
+            data(currTrial).percentCCorrect = percentCCorrect; % Percent the subject has chosen correctly so far.
+        elseif strcmp(taskType, 'singleSky')
+            data(currTrial).percentCSky = percentCSky;
+            data(currTrial).percentCSun = percentCSun;
+            data(currTrial).percentCMoon = percentCMoon;
+            data(currTrial).percentCCorrect = percentCCorrect;
+        elseif strcmp(taskType, 'singleFruit')
+            data(currTrial).percentCFruit = percentCFruit;
+            data(currTrial).percentCOrange = percentCOrange;
+            data(currTrial).percentCApple = percentCApple;
+            data(currTrial).percentCCorrect = percentCCorrect;
+        elseif strcmp(taskType, 'safeLeft')
+            data(currTrial).percentCSafeL = percentCSafeL;     % Percent the left safe option has been chosen so far.
+            data(currTrial).percentCFruit = percentCFruit;
+            data(currTrial).percentCOrange = percentCOrange;
+            data(currTrial).percentCApple = percentCApple;
+            data(currTrial).percentCCorrect = percentCCorrect;
+        elseif strcmp(taskType, 'safeRight')
+            data(currTrial).percentCSafeR = percentCSafeR;     % Percent the right safe option has been chosen so far.
+            data(currTrial).percentCSky = percentCSky;
+            data(currTrial).percentCSun = percentCSun;
+            data(currTrial).percentCMoon = percentCMoon;
+            data(currTrial).percentCCorrect = percentCCorrect;
+        end
         
         eval(saveCommand);
     end
