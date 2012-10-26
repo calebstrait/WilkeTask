@@ -13,22 +13,20 @@ function wilke_task()
     % @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ %
     % @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ %
       
-      taskType     = 'safeLeft';           % Values: 'double', 'singleSky',
-                                           %         'singleFruit', 'safeLeft', or
-                                           %         'safeRight'.
+      taskType        = 'safeLeft';             % Values: 'double', 'singleSky',
+                                              %         'singleFruit', 'safeLeft', or
+                                              %         'safeRight'.
       
-      correlation  = 0;                    % Values: Floating point numbers between
-                                           %         -1 and 1 inclusive.
+      correlation     = 0;                    % Values: Floating point numbers between
+                                              %         -1 and 1 inclusive.
       
-      showUnchosen = true;                 % Values: true or false.
+      showUnchosen    = false;                % Values: true or false.
       
-      rewardPause  = 0.1;                  % Values: Floating point number.
+      safeRewards     = [0.05, 0.08, 0.15];   % Values: An array of floating point numbers.
       
-      safeRewards  = [0.08];               % Values: An array of floating point numbers.
+      rewardDuration  = 0.1;                  % Values: An array of floating point numbers
       
-      rewardArray  = [0.1, 1.0];           % Values: An array of floating point numbers
-      
-      trackedEye   = 1;                    % Values: 1 (left eye), 2 (right eye).
+      trackedEye      = 1;                    % Values: 1 (left eye), 2 (right eye).
       
     % @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ %
     % @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ %
@@ -37,7 +35,7 @@ function wilke_task()
     colorBackground  = [25 23 23];
     colorCyan        = [0 255 255];
     colorGray        = [128 128 128];
-    colorDarkGray    = [70 70 70];
+    colorDarkGray    = [60 60 60];
     colorYellow      = [255 255 0];
     colorWhite       = [255 255 255];
     
@@ -144,12 +142,27 @@ function wilke_task()
     monkeyScreen     = 0;                    % Number of the screen the monkey sees.
     
     % Saving.
-    choiceMade       = '';                   % Which side was chosen.
+    choiceMade       = '';                   % Which option was chosen.
+    choiceMachine    = '';                   % Which slot machine was chosen.
     data             = struct([]);           % Workspace variable where trial data is saved.
-    numChoseImg      = 0;                    % Times image was chosen.
-    numCorrTimes     = 0;                    % Times "correct" probe option chosen.
-    percentChoseImg  = 0;                    % Percent of times the image option was chosen.
-    percentCorrect   = 0;                    % Percent "corect" probe chosen.
+    numChoseApple    = 0;                    % Times fruit slot machine was chosen.
+    numChoseFruit    = 0;                    % Times fruit slot machine was chosen.
+    numChoseMoon     = 0;                    % Times fruit slot machine was chosen.
+    numChoseOrange   = 0;                    % Times sky slot machine was chosen.
+    numChoseSafeL    = 0;                    % Times left safe option was chosen.
+    numChoseSafeR    = 0;                    % Times right safe option was chosen.
+    numChoseSky      = 0;                    % Times sky slot machine was chosen.
+    numChoseSun      = 0;                    % Times sky slot machine was chosen.
+    numCorrTimes     = 0;                    % Times correct option chosen.
+    percentCApple    = 0;                    % Percent apple option chosen.
+    percentCCorect   = 0;                    % Percent correct choice chosen.
+    percentCFruit    = 0;                    % Percent fruit slot machine chosen.
+    percentCMoon     = 0;                    % Percent moon option chosen.
+    percentCOrange   = 0;                    % Percent orange option chosen.
+    percentCSafeL    = 0;                    % Percent left safe option chosen.
+    percentCSafeR    = 0;                    % Percent right safe option chosen.
+    percentCSky      = 0;                    % Percent sky slot machine chosen.
+    percentCSun      = 0;                    % Percent sun option chosen.
     rewardRepeatData = '/Data/WilkeTask';    % Directory where .mat files are saved.
     saveCommand      = NaN;                  % Command string that will save .mat files.
     varName          = 'data';               % Name of the variable to save in the workspace.
@@ -158,13 +171,13 @@ function wilke_task()
     pointRadius      = 10;                   % Radius of the fixation dot.
     
     % Times.
-    chooseHoldTime   = 1;                    % How long subject must look at choice to select it.
+    chooseHoldTime   = 0.5;                  % How long subject must look at choice to select it.
     feedbackTime     = 0.5;                  % Time option selected feedback border is given.
     flashInterval    = 0.3;                  % Time between fame redraws when options are spinning.
     ITI              = 1;                    % Intertrial interval.
     initHoldFixTime  = 0.3;                  % Time fixation must be held before choosing an option.
     minFixTime       = 0.1;                  % Minimum time monkey must fixate to start trial.
-    spinTime         = 3;                    % How long the slot machine options spin.
+    spinTime         = 2;                    % How long the slot machine options spin.
     timeToFix        = intmax;               % Amount of time monkey is given to fixate.
     
     % Trial.
@@ -1015,38 +1028,28 @@ function wilke_task()
     end
     
     % Rewards monkey using the juicer with the array of passed duration(s).
-    function reward(rewardDurationsArray)
+    function reward(rewardDuration)
+        % Reset "rewardDuration" if this is this trial has a safe option.
+        if strcmp(taskType, 'safeLeft') || strcmp(taskType, 'safeRight')
+            matrixSize = size(rewardDuration);
+            arrayLen = matrixSize(2);
+            randIndex = rand_int(arrayLen);
+            rewardDuration = rewardDuration(randIndex);
+        end
+        
         % Get a reference the juicer device and set reward duration.
         % daq = DaqDeviceIndex;
         
-        % Determine if multiple rewards should be given.
-        numOfRewards = size(rewardDurationsArray, 2);
-        if numOfRewards > 1
-            multRewards = 1;
-        else
-            multRewards = 0;
+        % Open juicer.
+        % DaqAOut(daq, 0, .6);
+
+        % Keep looping to keep juicer open until reward end.
+        startTime = GetSecs;
+        while (GetSecs - startTime) < rewardDuration
         end
-        
-        for index = 1:numOfRewards
-            % Open juicer.
-            % DaqAOut(daq, 0, .6);
-            
-            % Keep looping to keep juicer open until reward end.
-            startTime = GetSecs;
-            while (GetSecs - startTime) < rewardDurationsArray(index)
-            end
-            
-            % Close juicer.
-            % DaqAOut(daq, 0, 0);
-            
-            % Pause between multiple rewards.
-            if multRewards
-                % Don't pause after the last reward in a sequence.
-                if index ~= numOfRewards
-                    WaitSecs(rewardPause);
-                end
-            end
-        end
+
+        % Close juicer.
+        % DaqAOut(daq, 0, 0);
     end
     
     function run_single_trial()
@@ -1109,14 +1112,39 @@ function wilke_task()
                         % Give reward feedback if earned.
                         if strcmp(area, 'sun') || strcmp(area, 'moon')
                             if strcmp(area, currCorrOpSky)
-                                reward(rewardArray);
+                                reward(rewardDuration);
+                                numCorrTimes = numCorrTimes + 1;
+                            end
+                            
+                            % Updates.
+                            numChoseSky = numChoseSky + 1;
+                            if strcmp(area, 'sun')
+                                numChoseSun = numChoseSun + 1;
+                            else
+                                numChoseMoon = numChoseMoon + 1;
                             end
                         elseif strcmp(area, 'orange') || strcmp(area, 'apple')
                             if strcmp(area, currCorrOpFruit)
-                                reward(rewardArray);
+                                reward(rewardDuration);
+                                numCorrTimes = numCorrTimes + 1;
+                            end
+                            
+                            % Updates.
+                            numChoseFruit = numChoseFruit + 1;
+                            if strcmp(area, 'orange')
+                                numChoseOrange = numChoseOrange + 1;
+                            else
+                                numChoseApple = numChoseApple + 1;
                             end
                         elseif strcmp(area, 'safeLeft') || strcmp(area, 'safeRight')
                             reward(safeRewards);
+                            
+                            % Updates.
+                            if strcmp(area, 'safeLeft')
+                                numChoseSafeL = numChoseSafeL + 1;
+                            else
+                                numChoseSafeR = numChoseSafeR + 1;
+                            end
                         end
                     end
                 end
@@ -1124,7 +1152,7 @@ function wilke_task()
         else
             % Redo this trial since monkey failed to start it.
             run_single_trial;
-        end 
+        end
     end
     
     % Saves trial data to a .mat file.
